@@ -8,20 +8,22 @@ if (-not (Test-Path $ConfigFile)) {
     Exit
 }
 
-# Parse JSON settings
-$Config = Get-Content -Raw -Path $ConfigFile | ConvertTo-Json -AsHashtable -ErrorAction SilentlyContinue
-
-# Fallback parser if you are on an older PowerShell version without -AsHashtable
-if (-not $Config) {
-    $Config = Get-Content -Raw -Path $ConfigFile | Convert-Json
+# Safely parse the raw text file from JSON to a standard PSCustomObject
+try {
+    $RawJson = Get-Content -Raw -Path $ConfigFile
+    $Config = ConvertFrom-Json -InputObject $RawJson
+} catch {
+    Write-Error "Failed to parse JSON file structure: $_"
+    Exit
 }
 
+# Access properties directly from the object
 $Token      = $Config.CloudflareToken
 $ZoneId     = $Config.ZoneId
 $RecordName = $Config.RecordName
 
 if (-not $Token -or -not $ZoneId -or -not $RecordName) {
-    Write-Error "Invalid configuration. CloudflareToken, ZoneId, and RecordName are all required."
+    Write-Error "Invalid configuration. CloudflareToken, ZoneId, and RecordName are all required inside config.json."
     Exit
 }
 # ---------------------------------------
