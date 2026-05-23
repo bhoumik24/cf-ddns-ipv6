@@ -1,52 +1,91 @@
-# DDNS IPv6 Script
+# Cloudflare IPv6 DDNS for Windows
 
-A lightweight script to update dynamic DNS (DDNS) records with the current public IPv6 address.
+A lightweight, native PowerShell utility that dynamically updates a Cloudflare DNS `AAAA` record with your local machine's current Global Unicast IPv6 address. Designed to run seamlessly in the background using Windows Task Scheduler without requiring external daemons or third-party client installations.
 
-## Overview
+## Features
 
-This script detects the current IPv6 address assigned to the host and updates a DDNS provider with the new value. It is useful for systems that do not have a static IPv6 address and need to keep DNS records in sync.
+- **Native Windows Execution:** Built purely on PowerShell and native `NetTCPIP` cmdlets. No extra software dependencies.
+- **Smart IPv6 Filtering:** Automatically filters out Link-Local (`fe80::`) and temporary random privacy addresses, ensuring only your stable, preferred global routing identifier is sent to Cloudflare.
+- **Secure Secret Management:** Decouples sensitive production tokens from source control via an external JSON profile.
+- **Differential Updates:** Queries Cloudflare first to inspect the remote status and only fires a `PUT` transaction if a local WAN infrastructure shift is detected, minimizing API footprint.
 
-## Requirements
+---
 
-- PowerShell 5.1 or later / PowerShell Core
-- IPv6 connectivity
-- Access to a supported DDNS provider API
-- Credentials or API token for the DDNS service
+## Setup
 
-## Installation
+### 1. Cloudflare prerequisites
 
-1. Clone or download the repository to a local folder.
-2. Place the script in a folder such as `c:\Scripts\ddns-ipv6`.
-3. Ensure the script file has the correct execution permissions.
+1. Open the Cloudflare dashboard.
+2. Go to **My Profile > API Tokens** and click **Create Token**.
+3. Use the **Edit zone DNS** template.
+4. Restrict the token to the zone or domain you want to update.
+5. Copy the API token.
+6. In the zone Overview page, copy the **Zone ID**.
+7. Create the target `AAAA` DNS record in Cloudflare before running the script.
 
-## Configuration
+> The script updates an existing record by name, so the DNS record must already exist.
 
-1. Edit the script to configure the DDNS provider endpoint and authentication details.
-2. Set the hostname or DDNS record name that should be updated.
-3. Optionally update polling intervals or logging settings if available.
+### 2. Configure `config.json`
 
-## Usage
-
-Run the script from PowerShell:
-
-```powershell
-cd c:\Scripts\ddns-ipv6
-.\update-ddns-ipv6.ps1
-```
-
-If the script supports parameters, supply them as needed:
+Copy the example file and edit it with your Cloudflare settings:
 
 ```powershell
-.\update-ddns-ipv6.ps1 -ApiKey "YOUR_API_KEY" -Hostname "example.yourddns.com"
+Copy-Item config.json.example config.json
 ```
 
-## Troubleshooting
+Update `config.json` with:
 
-- Verify the system has an active IPv6 address.
-- Confirm the DDNS service credentials and API endpoint are correct.
-- Check for firewall or network restrictions blocking API access.
+```json
+{
+  "CloudflareToken": "your_api_token_here",
+  "ZoneId": "your_zone_id_here",
+  "RecordName": "subdomain.yourdomain.com"
+}
+```
+
+### 3. Test the script manually
+
+Run PowerShell as Administrator and execute:
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process
+& ".\cloudflare-ddns-ipv6.ps1"
+```
+
+Verify the output and confirm the Cloudflare `AAAA` record reflects your global IPv6 address.
+
+## Windows Task Scheduler
+
+Configure the script to run on a schedule in Task Scheduler.
+
+1. Open **Task Scheduler** (`taskschd.msc`).
+2. Select **Create Task**.
+3. Under the **General** tab:
+   - Set a task name such as **Cloudflare DDNS IPv6**.
+   - Select **Run whether user is logged on or not**.
+   - Enable **Run with highest privileges**.
+4. Under the **Triggers** tab:
+   - Create a new trigger.
+   - Set it to start **One time**.
+   - Enable **Repeat task every:** and choose a cadence such as **15 minutes**.
+   - Set **for a duration of:** to **Indefinitely**.
+5. Under the **Actions** tab:
+   - Choose **Start a program**.
+   - For **Program/script**, enter `powershell.exe`.
+   - For **Add arguments**, enter:
+
+```powershell
+-ExecutionPolicy Bypass -File "C:\Scripts\ddns-ipv6\cloudflare-ddns-ipv6.ps1" *> "C:\Scripts\ddns-ipv6\ddns.log"
+```
+
+6. Under the **Conditions** tab:
+   - Ensure **Start only if the following network connection is available** is set to **Any connection**.
 
 ## Notes
 
-- This README provides a general guide. Adjust settings based on the specific implementation details of the script.
-- Keep sensitive API credentials secure and avoid committing them to version control.
+- The script prefers global unicast IPv6 addresses and ignores link-local or temporary privacy addresses.
+- Keep `config.json` private and do not commit it to source control.
+
+## License
+
+This project is available under the [MIT License](LICENSE).
