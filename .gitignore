@@ -1,0 +1,5 @@
+# Ignore local credentials file
+config.json
+
+# Ignore local execution logs
+*.log

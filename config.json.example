@@ -1,0 +1,5 @@
+{
+  "CloudflareToken": "your_api_token_here",
+  "ZoneId": "your_zone_id_here",
+  "RecordName": "subdomain.yourdomain.com"
+}
