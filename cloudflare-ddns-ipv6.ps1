@@ -30,7 +30,7 @@ if (-not $Token -or -not $ZoneId -or -not $RecordName) {
 
 # 1. Fetch the machine's current Global Unicast IPv6 Address
 $IpAddress = (Get-NetIPAddress -AddressFamily IPv6 -AddressState Preferred | 
-    Where-Object { $_.IPAddress -notlike "fe80*" -and $_.SuffixOrigin -ne "Random" }).IPAddress[0]
+    Where-Object { $_.IPAddress -notlike "f*" -and $_.IPAddress -notlike ":*" -and $_.SuffixOrigin -ne "Random" }).IPAddress[0]
 
 if (-not $IpAddress) {
     Write-Error "No valid global IPv6 address discovered on local interfaces."
